@@ -41,7 +41,10 @@ ChromeDriver must match the version of Google Chrome installed on your system. F
    ```bash
    http://127.0.0.1:5000/fetch-prices
     ```
-
+   
 ## Notes
 - Ensure you have the correct version of ChromeDriver matching your Chrome browser version.
 - This project is for educational purposes only and should comply with the terms of service of the platforms being scraped.
+
+## License
+This project is licensed under a **Proprietary License**. Unauthorized use, distribution, or modification of the code is strictly prohibited.
