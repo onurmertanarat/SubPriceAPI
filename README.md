@@ -4,10 +4,10 @@ This project is a Flask-based web application that fetches subscription prices f
 
 ## Screenshots
 ### API Example
-![API Response Example](screenshots/api_example.png)
+![API Response Example](https://github.com/onurmertanarat/SubPriceAPI/blob/master/screenshots/api_example.PNG)
 
 ### Browser View
-![Browser View](screenshots/browser_view.png)
+![Browser View](https://github.com/onurmertanarat/SubPriceAPI/blob/master/screenshots/browser_view.PNG)
 
 
 ## Features
