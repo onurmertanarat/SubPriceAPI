@@ -1,50 +1,121 @@
-# Subscription Price Fetcher API
+# Subscription Price Scraping API
 
-This project is a Flask-based web application that fetches subscription prices from popular streaming platforms using Selenium.
+A Flask-based REST API that concurrently scrapes the latest subscription prices from major streaming platforms using Selenium.
 
-## Screenshots
-### API Example
-![API Response Example](https://github.com/onurmertanarat/SubPriceAPI/blob/master/screenshots/api_example.PNG)
+<p>
+  <img src="https://github.com/onurmertanarat/SubPriceAPI/blob/master/assets/subprice-api-screenshot.PNG" alt="API Demo Screenshot">
+</p>
 
-### Browser View
-![Browser View](https://github.com/onurmertanarat/SubPriceAPI/blob/master/screenshots/browser_view.PNG)
-
+---
 
 ## Features
-- Fetches subscription prices from platforms like Netflix, BluTV, Exxen, MUBI, and more.
-- Uses multithreading for efficient scraping.
-- Returns results in JSON format.
 
-## Installation
-1. Clone the repository:
-   ```bash
-    git clone https://github.com/username/subscription-price-fetcher.git
-    cd subscription-price-fetcher
+* **Concurrent Scraping:** Utilizes a `ThreadPoolExecutor` to scrape multiple websites in parallel, significantly reducing the total execution time compared to a sequential approach.
+* **Robust Error Handling:** Implements a retry mechanism that attempts to fetch data multiple times upon failure, making the scraper resilient to temporary network issues or slow page loads.
+* **Dynamic & Headless Browser:** Uses Selenium with headless Chrome to scrape dynamic websites that rely on JavaScript to render content.
+* **Anti-Scraping Measures:** Rotates `User-Agent` strings for each request using the `fake-useragent` library to mimic real user traffic.
+* **Clean Data Extraction:** Parses prices from unstructured text using Regular Expressions (Regex).
+* **REST API:** Exposes the scraped data through a clean and simple `/fetch-prices` GET endpoint using the Flask web framework.
+
+---
+
+## Technology Stack
+
+* **Backend:** Flask
+* **Web Scraping:** Selenium
+* **Concurrency:** `concurrent.futures.ThreadPoolExecutor`
+* **Dependencies:** `fake-useragent`, `re`
+
+---
+
+## Installation & Usage
+
+### Prerequisites
+
+* Python 3.8+
+* pip
+* Google Chrome (or the browser you configure)
+
+### Installation
+
+1.  **Clone the repository:**
+    ```sh
+    git clone [https://github.com/onurmertanarat/SubPriceAPI.git](https://github.com/onurmertanarat/SubPriceAPI.git)
+    cd SubPriceAPI
     ```
-2. Install dependencies:
-   ```bash
+
+2.  **Create and activate a virtual environment:**
+    ```sh
+    # Create the environment
+    python -m venv venv
+
+    # Activate on Windows
+    venv\Scripts\activate
+    ```
+
+3.  **Install the required packages:**
+    ```sh
     pip install -r requirements.txt
     ```
-3. Ensure ChromeDriver is installed and accessible in your system's PATH.
 
-## How to Install ChromeDriver
-ChromeDriver must match the version of Google Chrome installed on your system. Follow the steps below to install it:
-1. Download ChromeDriver from the official site: https://chromedriver.chromium.org/downloads
-2. Extract the downloaded file and add the directory containing chromedriver.exe to your system's PATH variable.
+### Running the API
 
-## Usage
-1. Run the Flask application:
-   ```bash
-   python app.py
-    ```
-2. Access the API at:
-   ```bash
-   http://127.0.0.1:5000/fetch-prices
-    ```
-   
-## Notes
-- Ensure you have the correct version of ChromeDriver matching your Chrome browser version.
-- This project is for educational purposes only and should comply with the terms of service of the platforms being scraped.
+Run the Flask development server with the following command:
 
-## License
-This project is licensed under a **Proprietary License**. Unauthorized use, distribution, or modification of the code is strictly prohibited.
+```sh
+python app.py
+```
+
+The API will be available at http://127.0.0.1:5000.
+
+---
+
+## API Endpoint
+
+```sh
+GET /fetch-prices
+```
+
+Fetches the latest prices for all configured platforms.
+
+**Method:** GET
+
+**URL:** http://127.0.0.1:5000/fetch-prices
+
+**Success Response (200 OK):**
+
+    [
+      {
+        "currency": "TRY",
+        "name": "Netflix",
+        "price": 189.99
+      },
+      {
+        "currency": "TRY",
+        "name": "HBO Max",
+        "price": 229.9
+      },
+      {
+        "currency": "TRY",
+        "name": "MUBI",
+        "price": 169.0
+      },
+      {
+        "currency": "TRY",
+        "name": "Amazon Prime Video",
+        "price": 49.9
+      },
+      {
+        "currency": "TRY",
+        "name": "Disney+",
+        "price": 349.9
+      }
+    ]
+
+---
+
+## Contact
+
+Onur Mert Anarat
+
+[linkedin.com/in/onurmertanarat](https://www.linkedin.com/in/onurmertanarat)
