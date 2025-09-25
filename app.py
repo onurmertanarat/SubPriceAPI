@@ -1,76 +1,92 @@
 from flask import Flask, jsonify, request
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
 from fake_useragent import UserAgent
 from selenium.webdriver.chrome.options import Options
 import re
-import random
 from concurrent.futures import ThreadPoolExecutor
+import time
 
 app = Flask(__name__)
 
 platforms = [
-    {'name':'Netflix', 'url':'https://www.netflix.com/tr/', 'xpath':'//*[@id="appMountPoint"]/div/div/div/div/div/div[1]/div/div[3]/div/div[2]/div[1]/div/div[1]/div/div/p'},
-    {'name':'BluTV', 'url':'https://www.blutv.com/', 'xpath':'//*[@id="__next"]/div[3]/div/p[1]'},
-    {'name':'Exxen', 'url':'https://www.exxen.com/tr/bilgi/on-bilgilendirme-formu', 'xpath':'/html/body/div[2]/div[4]/p[46]'},
-    {'name':'MUBI', 'url':'https://mubi.com/tr/tr/memberships', 'xpath':'//*[@id="__next"]/div[7]/div/table/tbody/tr[1]/td[2]/div[2]/span/div'},
-    {'name':'Amazon Prime Video', 'url':'https://www.amazon.com.tr/prime', 'xpath':'//*[@id="prime-hero-header"]/div/div[3]'},
-    {'name':'Disney+', 'url':'https://www.disneyplus.com/tr-tr', 'xpath':'/html/body/main/section[1]/div[1]/ul/li[1]/p/span[2]/b'},
+    {'name':'Netflix', 'url':'https://www.netflix.com/tr/', 'by': By.XPATH, 'selector': "//p[contains(text(), 'TL ile başlayan fiyatlarla')]"},
+    {'name':'HBO Max', 'url':'https://www.hbomax.com/tr/tr', 'by': By.XPATH, 'selector': "//h4[contains(., 'TL') and em[contains(text(), '/ay')]]"},
+    {'name':'MUBI', 'url':'https://mubi.com/tr/tr/memberships', 'by': By.XPATH, 'selector': "//div[starts-with(text(), '₺')]"},
+    {'name':'Amazon Prime Video', 'url':'https://www.amazon.com.tr/prime', 'by': By.XPATH, 'selector': "//span[contains(text(), 'sonrasında Prime')]"},
+    {'name':'Disney+', 'url':'https://www.disneyplus.com/tr-tr', 'by': By.XPATH, 'selector': "//p[contains(text(), 'TL / ay')]"},
 ]
 
+def fetch_price(platform, retries=3, delay=5):
+    for attempt in range(retries):
+        driver = None
+        try:
+            ua = UserAgent()
+            user_agent = ua.random
 
-def fetch_price(platform):
-    try:
-        ua = UserAgent()
-        user_agent = ua.random
+            options = Options()
+            options.add_argument(f'--user-agent={user_agent}')
+            options.add_argument('--headless')
+            options.add_argument("--window-size=1920,1080")
+            options.add_argument("--log-level=3")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            options.add_argument('--blink-settings=imagesEnabled=false')
 
-        options = Options()
-        options.add_argument(f'--user-agent={user_agent}')
-        options.add_argument('--headless')
+            driver = webdriver.Chrome(options=options)
+            driver.get(platform['url'])
 
-        driver = webdriver.Chrome(options=options)
-        driver.set_window_size(1024, 768)
+            wait_condition = EC.visibility_of_element_located((platform['by'], platform['selector']))
+            WebDriverWait(driver, 15).until(wait_condition) 
+            price_element = driver.find_element(platform['by'], platform['selector'])
+            
+            return {'name': platform['name'], 'price_text': price_element.text}
 
-        driver.get(platform['url'])
+        except (TimeoutException, NoSuchElementException, WebDriverException) as e:
+            print(f"Attempt {attempt + 1}/{retries} for {platform['name']} failed. Retrying in {delay}s...")
+            time.sleep(delay)
+        
+        finally:
+            if driver:
+                driver.quit()
 
-        WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.XPATH, platform['xpath'])))
-        price_element = driver.find_element(By.XPATH, platform['xpath'])
-        return {'name': platform['name'], 'price_text': price_element.text}
-    except (TimeoutException, NoSuchElementException, WebDriverException) as e:
-        print(f"Error fetching price from {platform['name']}: {e}")
-        return {'name': platform['name'], 'price_text': None}
-    finally:
-        driver.quit()
+    print(f"All {retries} attempts for {platform['name']} failed.")
+    return {'name': platform['name'], 'price_text': None}
 
 
 def find_price(price_text):
     if not price_text:
         return None
-    pattern = r"(?:₺|TL|tl|-\s?TL)\s?(\d{1,3}(?:[.,]\d{1,2})?)|(\d{1,3}(?:[.,]\d{1,2})?)\s?(?:TL|tl|-?\s?TL)"
+    pattern = r'(\d{1,3}[.,]\d{2})'
     matches = re.findall(pattern, price_text)
-    prices = []
-    for match in matches:
-        price = match[0] if match[0] else match[1]
-        prices.append(float(price.replace(',', '.')))
-    return prices[0] if prices else None
+    
+    if not matches:
+        pattern = r'(\d+)'
+        matches = re.findall(pattern, price_text)
+
+    if matches:
+        price = matches[0].replace(',', '.')
+        return float(price)
+    return None
 
 @app.route('/fetch-prices', methods=['GET'])
 def fetch_prices():
     currency = request.args.get('currency', 'TRY').upper()
-    with ThreadPoolExecutor() as executor:
+    
+    with ThreadPoolExecutor(max_workers=len(platforms)) as executor:
         results = list(executor.map(fetch_price, platforms))
     
     prices = []
     for result in results:
         price = find_price(result['price_text'])
         prices.append({
-            'name':result['name'],
-            'price':price,
-            'currency':currency if price else None
+            'name': result['name'],
+            'price': price,
+            'currency': currency if price else None
         })
     
     return jsonify(prices)
